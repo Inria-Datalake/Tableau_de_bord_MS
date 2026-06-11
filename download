@@ -1,0 +1,373 @@
+import _ from 'lodash';
+
+// Country code to lat/lng mapping for the world map
+const COUNTRY_COORDS = {
+  FR: [46.6034, 1.8883], US: [37.0902, -95.7129], DE: [51.1657, 10.4515],
+  GB: [55.3781, -3.436], IT: [41.8719, 12.5674], ES: [40.4637, -3.7492],
+  CH: [46.8182, 8.2275], NL: [52.1326, 5.2913], BE: [50.5039, 4.4699],
+  CA: [56.1304, -106.3468], JP: [36.2048, 138.2529], CN: [35.8617, 104.1954],
+  BR: [-14.235, -51.9253], IN: [20.5937, 78.9629], AU: [-25.2744, 133.7751],
+  SE: [60.1282, 18.6435], NO: [60.472, 8.4689], DK: [56.2639, 9.5018],
+  FI: [61.9241, 25.7482], AT: [47.5162, 14.5501], PT: [39.3999, -8.2245],
+  PL: [51.9194, 19.1451], CZ: [49.8175, 15.4730], GR: [39.0742, 21.8243],
+  IE: [53.1424, -7.6921], RO: [45.9432, 24.9668], HU: [47.1625, 19.5033],
+  RU: [61.524, 105.3188], IL: [31.0461, 34.8516], KR: [35.9078, 127.7669],
+  TW: [23.6978, 120.9605], SG: [1.3521, 103.8198], MX: [-19.4326, -99.1332],
+  AR: [-38.4161, -63.6167], CL: [-35.6751, -71.543], CO: [4.5709, -74.2973],
+  ZA: [-30.5595, 22.9375], MA: [31.7917, -7.0926], TN: [33.8869, 9.5375],
+  EG: [26.8206, 30.8025], NG: [9.082, 8.6753], KE: [-0.0236, 37.9062],
+  TR: [38.9637, 35.2433], SA: [23.8859, 45.0792], AE: [23.4241, 53.8478],
+  TH: [15.87, 100.9925], VN: [14.0583, 108.2772], MY: [4.2105, 101.9758],
+  ID: [-0.7893, 113.9213], PH: [12.8797, 121.774], NZ: [-40.9006, 174.886],
+  LU: [49.8153, 6.1296], SK: [48.669, 19.699], SI: [46.1512, 14.9955],
+  HR: [45.1, 15.2], BG: [42.7339, 25.4858], LT: [55.1694, 23.8813],
+  LV: [56.8796, 24.6032], EE: [58.5953, 25.0136], CY: [35.1264, 33.4299],
+  MT: [35.9375, 14.3754], IS: [64.9631, -19.0208], UA: [48.3794, 31.1656],
+  RS: [44.0165, 21.0059], BA: [43.9159, 17.6791], MK: [41.5126, 21.7453],
+  AL: [41.1533, 20.1683], ME: [42.7087, 19.3744], GF: [3.9339, -53.1258],
+  MC: [43.7384, 7.4246], LI: [47.166, 9.5554], AD: [42.5063, 1.5218],
+  SM: [43.9424, 12.4578], VA: [41.9029, 12.4534], XK: [42.6026, 20.903],
+  MD: [47.4116, 28.3699], BY: [53.7098, 27.9534], GE: [42.3154, 43.3569],
+  AM: [40.0691, 43.5099], AZ: [40.1431, 47.5769], UZ: [41.3775, 64.5853],
+  KZ: [48.0196, 66.9237], PK: [30.3753, 69.3451], BD: [23.685, 90.3563],
+  LK: [7.8731, 80.7718], MM: [21.9162, 95.956], KH: [12.5657, 104.991],
+  LA: [19.8563, 102.4955], NP: [28.3949, 84.124], DZ: [28.0339, 1.6596],
+  LY: [26.3351, 17.2283], SD: [12.8628, 30.2176], ET: [9.145, 40.4897],
+  TZ: [-6.369, 34.8888], UG: [1.3733, 32.2903], GH: [7.9465, -1.0232],
+  SN: [14.4974, -14.4524], CM: [7.3697, 12.3547], CI: [7.54, -5.5471],
+  PE: [-9.19, -75.0152], VE: [6.4238, -66.5897], EC: [-1.8312, -78.1834],
+  UY: [-32.5228, -55.7658], PY: [-23.4425, -58.4438], BO: [-16.2902, -63.5887],
+  PA: [8.538, -80.7821], CR: [9.7489, -83.7534], GT: [15.7835, -90.2308],
+  CU: [21.5218, -77.7812], DO: [18.7357, -70.1627], HN: [15.2, -86.2419],
+  SV: [13.7942, -88.8965], NI: [12.8654, -85.2072], JM: [18.1096, -77.2975],
+  PR: [18.2208, -66.5901], HK: [22.3193, 114.1694], MO: [22.1987, 113.5439],
+};
+
+// Mapping de normalisation des centres Inria
+const CENTRE_ALIASES = {
+  // Bordeaux
+  'Inria Univ. Bordeaux': 'Inria Bordeaux',
+  'Inria Bordeaux - Sud-Ouest': 'Inria Bordeaux',
+  'Inria Bordeaux Sud-Ouest': 'Inria Bordeaux',
+  'Inria Bordeaux': 'Inria Bordeaux',
+
+  // Grenoble
+  'Inria Univ. Grenoble': 'Inria Grenoble',
+  'Inria Grenoble - Rhône-Alpes': 'Inria Grenoble',
+  'Inria Grenoble Rhône-Alpes': 'Inria Grenoble',
+  'Inria Grenoble': 'Inria Grenoble',
+
+  // Rennes
+  'Inria Univ. Rennes': 'Inria Rennes',
+  'Inria Rennes - Bretagne Atlantique': 'Inria Rennes',
+  'Inria Rennes Bretagne Atlantique': 'Inria Rennes',
+  'Inria Rennes': 'Inria Rennes',
+
+  // Saclay
+  'Inria Saclay': 'Inria Saclay',
+  'Inria Saclay - Île-de-France': 'Inria Saclay',
+  'Inria Saclay – Île-de-France': 'Inria Saclay',
+  'Inria Saclay Île-de-France': 'Inria Saclay',
+  'Inria Saclay - Ile-de-France': 'Inria Saclay',
+
+  // Sophia Antipolis
+  'Inria Sophia Antipolis': 'Inria Sophia Antipolis',
+  'Inria Sophia Antipolis - Méditerranée': 'Inria Sophia Antipolis',
+  'Inria Sophia Antipolis Méditerranée': 'Inria Sophia Antipolis',
+  'Inria Univ. Côte d\'Azur': 'Inria Sophia Antipolis',
+  "Inria Univ. Côte d'Azur": 'Inria Sophia Antipolis',
+  'Inria Côte d\'Azur': 'Inria Sophia Antipolis',
+  "Inria Côte d'Azur": 'Inria Sophia Antipolis',
+
+  // Paris
+  'Inria Paris': 'Inria Paris',
+  'Inria de Paris': 'Inria Paris',
+  'Inria Paris - Rocquencourt': 'Inria Paris',
+  'Inria Paris Rocquencourt': 'Inria Paris',
+
+  // Nancy
+  'Inria Nancy': 'Inria Nancy',
+  'Inria Nancy - Grand Est': 'Inria Nancy',
+  'Inria Nancy Grand Est': 'Inria Nancy',
+  'Inria Univ. Lorraine': 'Inria Nancy',
+
+  // Lille
+  'Inria Lille': 'Inria Lille',
+  'Inria Lille - Nord Europe': 'Inria Lille',
+  'Inria Lille Nord Europe': 'Inria Lille',
+  'Inria Univ. Lille': 'Inria Lille',
+
+  // Lyon
+  'Inria Lyon': 'Inria Lyon',
+  'Inria Univ. Lyon': 'Inria Lyon',
+};
+
+export function normalizeCentre(raw) {
+  if (!raw) return raw;
+  return CENTRE_ALIASES[raw.trim()] || raw.trim();
+}
+
+export function processRawData(publications) {
+  return publications.map(p => ({
+    hal_id: p.hal_id || '',
+    doc_type: p.doc_type || '',
+    annee: p.annee || 0,
+    centre_inria: p.centre_inria || '',
+    equipe_inria: p.equipe_inria || '',
+    auteur_inria: p.auteur_inria || '',
+    auteur_coauteur: p.auteur_coauteur || '',
+    nom_org_copubliant: p.nom_org_copubliant || '',
+    adresse_org_copubliant: p.adresse_org_copubliant || '',
+    nom_org_top_copubliant: p.nom_org_top_copubliant || '',
+    code_pays: p.code_pays || '',
+    nom_pays: p.nom_pays || '',
+    ue_hors_ue: p.ue_hors_ue || '',
+    domaine_hal: p.domaine_hal || '',
+    mots_cles_hal: p.mots_cles_hal || '',
+    domaine_inria: p.domaine_inria || '',
+    mots_cles_inria: p.mots_cles_inria || '',
+  }));
+}
+
+export function applyFilters(data, filters) {
+  return data.filter(d => {
+    if (filters.centre && normalizeCentre(d.centre_inria) !== filters.centre) return false;
+    if (filters.pays && d.nom_pays !== filters.pays) return false;
+    if (filters.anneeMin && d.annee < filters.anneeMin) return false;
+    if (filters.anneeMax && d.annee > filters.anneeMax) return false;
+    if (filters.equipe && d.equipe_inria !== filters.equipe) return false;
+    if (filters.auteur && d.auteur_inria !== filters.auteur) return false;
+    if (filters.docType && d.doc_type !== filters.docType) return false;
+    if (filters.domaine && d.domaine_inria !== filters.domaine) return false;
+    return true;
+  });
+}
+
+export function getPublicationsByYear(data) {
+  const grouped = _.groupBy(data, 'annee');
+  return Object.entries(grouped)
+    .map(([year, items]) => ({ year: Number(year), count: items.length }))
+    .sort((a, b) => a.year - b.year)
+    .filter(d => d.year > 0);
+}
+
+export function getTopCountries(data, limit = 10) {
+  const counts = _.countBy(data.filter(d => d.nom_pays), 'nom_pays');
+  return Object.entries(counts)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, limit);
+}
+
+export function getTopOrganismes(data, limit = 10) {
+  const counts = _.countBy(data.filter(d => d.nom_org_top_copubliant), 'nom_org_top_copubliant');
+  return Object.entries(counts)
+    .map(([name, count]) => ({ name: name.length > 40 ? name.slice(0, 37) + '...' : name, fullName: name, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, limit);
+}
+
+export function getEUDistribution(data) {
+  const counts = _.countBy(data.filter(d => d.ue_hors_ue), 'ue_hors_ue');
+  return Object.entries(counts).map(([name, value]) => ({
+    name: name === 'UE' ? 'Union Européenne' : 'Hors UE',
+    value,
+    fill: name === 'UE' ? 'hsl(var(--chart-1))' : 'hsl(var(--chart-2))'
+  }));
+}
+
+export function getDocTypeDistribution(data) {
+  const TYPE_LABELS = {
+    ART: 'Article', COMM: 'Communication', POSTER: 'Poster', PRESCONF: 'Présentation',
+    COUV: 'Chapitre', OUV: 'Ouvrage', THESE: 'Thèse', HDR: 'HDR',
+    REPORT: 'Rapport', UNDEFINED: 'Non défini', PATENT: 'Brevet'
+  };
+  const counts = _.countBy(data.filter(d => d.doc_type), 'doc_type');
+  return Object.entries(counts)
+    .map(([name, value]) => ({ name: TYPE_LABELS[name] || name, value }))
+    .sort((a, b) => b.value - a.value);
+}
+
+export function getTopEquipes(data, limit = 15) {
+  const counts = _.countBy(data.filter(d => d.equipe_inria), 'equipe_inria');
+  return Object.entries(counts)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, limit);
+}
+
+export function getCentreDistribution(data) {
+  const counts = {};
+  data.forEach(d => {
+    if (!d.centre_inria) return;
+    const normalized = normalizeCentre(d.centre_inria);
+    counts[normalized] = (counts[normalized] || 0) + 1;
+  });
+  return Object.entries(counts)
+    .map(([name, count]) => ({ name: name.replace('Inria ', ''), fullName: name, count }))
+    .sort((a, b) => b.count - a.count);
+}
+
+export function getKeywords(data) {
+  const allKeywords = {};
+  data.forEach(d => {
+    const kw1 = (d.mots_cles_hal || '').split(';');
+    const kw2 = (d.mots_cles_inria || '').split(',');
+    [...kw1, ...kw2].forEach(k => {
+      const clean = k.trim().toLowerCase();
+      if (clean && clean.length > 2 && clean.length < 40) {
+        allKeywords[clean] = (allKeywords[clean] || 0) + 1;
+      }
+    });
+  });
+  return Object.entries(allKeywords)
+    .map(([text, value]) => ({ text, value }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 80);
+}
+
+export function getNetworkData(data) {
+  const links = {};
+  data.forEach(d => {
+    if (d.centre_inria && d.nom_org_top_copubliant) {
+      const key = `${d.centre_inria}|||${d.nom_org_top_copubliant}`;
+      links[key] = (links[key] || 0) + 1;
+    }
+  });
+  return Object.entries(links)
+    .map(([key, value]) => {
+      const [source, target] = key.split('|||');
+      return { source, target: target.length > 30 ? target.slice(0, 27) + '...' : target, value };
+    })
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 25);
+}
+
+export function getMapData(data) {
+  const byCountry = {};
+  data.forEach(d => {
+    if (d.code_pays && COUNTRY_COORDS[d.code_pays]) {
+      if (!byCountry[d.code_pays]) {
+        byCountry[d.code_pays] = {
+          code: d.code_pays,
+          name: d.nom_pays,
+          count: 0,
+          coords: COUNTRY_COORDS[d.code_pays]
+        };
+      }
+      byCountry[d.code_pays].count++;
+    }
+  });
+  return Object.values(byCountry).sort((a, b) => b.count - a.count);
+}
+
+export function getFilterOptions(data) {
+  return {
+    centres: _.uniq(data.map(d => normalizeCentre(d.centre_inria)).filter(Boolean)).sort(),
+    pays: _.uniq(data.map(d => d.nom_pays).filter(Boolean)).sort(),
+    equipes: _.uniq(data.map(d => d.equipe_inria).filter(Boolean)).sort(),
+    auteurs: _.uniq(data.map(d => d.auteur_inria).filter(Boolean)).sort(),
+    docTypes: _.uniq(data.map(d => d.doc_type).filter(Boolean)).sort(),
+    domaines: _.uniq(data.map(d => d.domaine_inria).filter(Boolean)).sort(),
+    annees: _.uniq(data.map(d => d.annee).filter(Boolean)).sort(),
+  };
+}
+
+// Normalize a city name: Title Case, remove accents variations, trim
+function normalizeCityName(raw) {
+  return raw
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toLowerCase()
+    .replace(/\b\w/g, c => c.toUpperCase()); // Title Case
+}
+
+// Known aliases to merge into canonical names
+const CITY_ALIASES = {
+  'Evry': 'Évry',
+  'Evry-Courcouronnes': 'Évry',
+  'Evry Courcouronnes': 'Évry',
+  'Courcouronnes': 'Évry',
+  'Palaiseau': 'Palaiseau',
+  'Orsay': 'Orsay',
+  'Gif-Sur-Yvette': 'Gif-sur-Yvette',
+  'Gif Sur Yvette': 'Gif-sur-Yvette',
+  'Rocquencourt': 'Le Chesnay-Rocquencourt',
+  'Le Chesnay': 'Le Chesnay-Rocquencourt',
+  'Chesnay': 'Le Chesnay-Rocquencourt',
+  'Lyon Cedex': 'Lyon',
+  'Lyon Cedex 7': 'Lyon',
+  'Marseille Cedex': 'Marseille',
+  'Paris Cedex': 'Paris',
+  'Paris Cedex 5': 'Paris',
+  'Paris Cedex 13': 'Paris',
+  'Paris Cedex 16': 'Paris',
+  'Bordeaux Cedex': 'Bordeaux',
+  'Grenoble Cedex': 'Grenoble',
+  'Nice Cedex': 'Nice',
+  'Sophia Antipolis': 'Sophia Antipolis',
+  'Sophia-Antipolis': 'Sophia Antipolis',
+  'Valbonne': 'Sophia Antipolis',
+  'Inria Sophia Antipolis': 'Sophia Antipolis',
+  'Rennes Cedex': 'Rennes',
+  'Villeurbanne': 'Lyon',
+  'Montbonnot': 'Grenoble',
+  'Montbonnot-Saint-Martin': 'Grenoble',
+  'Saint-Ismier': 'Grenoble',
+  'Massy': 'Massy',
+  'Saclay': 'Saclay',
+  'Gif-Sur-Yvette Cedex': 'Gif-sur-Yvette',
+};
+
+function extractCityFromAddress(addr) {
+  if (!addr) return null;
+
+  // Strategy 1: match French postal code pattern "XXXXX CityName"
+  const postalMatch = addr.match(/\b\d{5}\s+([A-ZÀ-Ÿa-zà-ÿ][A-ZÀ-Ÿa-zà-ÿ\s\-]+?)(?:\s*(?:Cedex[\s\d]*|\.|,|$))/i);
+  if (postalMatch) {
+    return postalMatch[1].trim();
+  }
+
+  // Strategy 2: last comma-separated segment that looks like a city
+  const parts = addr.split(/[,\n]/);
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const p = parts[i].trim()
+      .replace(/cedex\s*\d*/gi, '')
+      .replace(/\b\d{4,}\b/g, '')
+      .replace(/bp\s*\d+/gi, '')
+      .trim();
+    if (p.length >= 2 && p.length <= 40 && !/^\d+$/.test(p) && !/^(rue|avenue|place|boulevard|allée|chemin|impasse|bâtiment|bat\b)/i.test(p)) {
+      return p;
+    }
+  }
+  return null;
+}
+
+export function getTopCities(data, limit = 10) {
+  const cities = {};
+  data.forEach(d => {
+    const raw = extractCityFromAddress(d.adresse_org_copubliant);
+    if (!raw) return;
+
+    let city = normalizeCityName(raw);
+    // Apply alias merging
+    city = CITY_ALIASES[city] || city;
+    // Skip noise
+    if (city.length < 2 || city.length > 50) return;
+
+    cities[city] = (cities[city] || 0) + 1;
+  });
+
+  return Object.entries(cities)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, limit);
+}
+
+export function getDomainesDistribution(data) {
+  const counts = _.countBy(data.filter(d => d.domaine_inria), 'domaine_inria');
+  return Object.entries(counts)
+    .map(([name, count]) => ({ name: name.length > 35 ? name.slice(0, 32) + '...' : name, fullName: name, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 8);
+}
