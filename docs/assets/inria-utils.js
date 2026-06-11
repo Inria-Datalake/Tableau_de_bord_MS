@@ -1,4 +1,4 @@
-import{c as Jr}from"./vendor-B3FrAO5K.js";var jt={exports:{}};/**
+import{c as Jr}from"./inria-vendor-libs.js";var jt={exports:{}};/**
  * @license
  * Lodash <https://lodash.com/>
  * Copyright OpenJS Foundation and other contributors <https://openjsf.org/>
